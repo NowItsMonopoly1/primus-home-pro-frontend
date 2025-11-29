@@ -1,0 +1,32 @@
+# Node / general
+node_modules/
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Build / output folders
+/frontend/.next/
+/backend/dist/
+/dist/
+/out/
+
+# Env files
+.env
+.env.*.local
+*.env.local
+
+# Logs
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS / Editor files
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.env

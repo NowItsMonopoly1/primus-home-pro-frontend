@@ -1,18 +1,26 @@
 {
   "name": "primus-insights-roofing",
   "version": "1.0.0",
-  "description": "AI follow-up and booking engine for roofing companies",
+  "type": "module",
+  "description": "Production-ready lead capture and SMS follow-up for roofing companies",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "db:check": "node check-database.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "twilio": "^4.20.0",
-    "openai": "^4.28.0",
-    "googleapis": "^131.0.0",
-    "dotenv": "^16.4.1"
+    "express-rate-limit": "^7.1.5",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "validator": "^13.11.0",
+    "better-sqlite3": "^9.2.2",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.1",
+    "stripe": "^14.14.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"

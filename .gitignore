@@ -2,3 +2,12 @@ node_modules/
 .env
 service-account.json
 *.log
+
+# Database files
+*.db
+*.db-wal
+*.db-shm
+leads.json.backup
+
+# Legacy storage
+leads.json

@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: primus-insights-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE
+        sync: false
+      - key: ADMIN_KEY
+        generateValue: true
+    healthCheckPath: /
