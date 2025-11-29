@@ -45,7 +45,7 @@ After deployment:
 - [ ] Copy your Render URL: `https://YOUR-APP-NAME.onrender.com`
 - [ ] Configure Twilio webhook:
   - Go to: Twilio Console → Phone Numbers → Manage → Active Numbers
-  - Click on: `+18555573967`
+  - Click on: `+14156902420`
   - Scroll to: "Messaging" section
   - Set "A MESSAGE COMES IN" to:
     `https://your-render-url.onrender.com/sms`
@@ -65,7 +65,7 @@ After deployment:
    ```
    TWILIO_ACCOUNT_SID=your_twilio_account_sid_here
    TWILIO_AUTH_TOKEN=your_twilio_auth_token_here
-   TWILIO_PHONE=+18555573967
+   TWILIO_PHONE=+14156902420
    OPENAI_API_KEY=your_openai_api_key_here
    OWNER_PHONE=+1your_verified_number
    CALENDAR_ID=primary
