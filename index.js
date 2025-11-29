@@ -1,54 +1,67 @@
-const express = require('express');
-const twilio = require('twilio');
-require('dotenv').config();
+import express from "express";
+import bodyParser from "body-parser";
+import twilio from "twilio";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
-const leadStore = [];
+// 🔥 SAFE MOCK AI (no external API calls)
+async function getAIResponse(message) {
+  return "Thanks for reaching out! What type of roofing issue are you dealing with?";
+}
 
-const sendSMS = async (to, body) => await twilioClient.messages.create({ from: process.env.TWILIO_PHONE, to, body });
+// In-memory leads
+let leads = [];
 
-const getAIResponse = async (history) => {
-  // Mock AI response for MVP - replace with actual OpenAI call when key is valid
-  return "Thanks for reaching out! What's your address so we can check roof options?";
-};
+// Lead intake
+app.post("/lead", async (req, res) => {
+  try {
+    const { phone, name, message } = req.body;
+    const leadId = leads.length;
 
-const bookCalendar = async (date) => {
-  // Placeholder: Google Calendar integration skipped for now
-  return `Appointment booked for ${new Date(date).toLocaleDateString()} at 10:00 AM (placeholder)`;
-};
+    leads.push({ phone, name, message });
 
-app.post('/lead', async (req, res) => {
-  const { phone, name, message } = req.body;
-  const lead = { phone, name, history: [{ role: 'user', content: message }], needsHuman: false };
-  leadStore.push(lead);
-  const aiMsg = await getAIResponse(lead.history);
-  lead.history.push({ role: 'assistant', content: aiMsg });
-  if (aiMsg.includes('ESCALATE')) lead.needsHuman = true;
-  await sendSMS(phone, aiMsg.replace('ESCALATE', 'Let me connect you with our team.'));
-  res.json({ status: 'ok', leadId: leadStore.length - 1 });
+    const aiMessage = await getAIResponse(message);
+
+    await client.messages.create({
+      body: aiMessage,
+      from: process.env.TWILIO_PHONE,
+      to: phone
+    });
+
+    res.json({ status: "ok", leadId });
+  } catch (err) {
+    console.error("Error in /lead:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/sms', async (req, res) => {
-  const { From, Body } = req.body;
-  const lead = leadStore.find(l => l.phone === From);
-  if (!lead) return res.send('<Response></Response>');
-  lead.history.push({ role: 'user', content: Body });
-  const aiMsg = await getAIResponse(lead.history);
-  lead.history.push({ role: 'assistant', content: aiMsg });
-  if (aiMsg.includes('ESCALATE')) { lead.needsHuman = true; await sendSMS(From, 'Let me connect you with our team.'); }
-  else if (aiMsg.startsWith('BOOK|')) {
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-    const slot = await bookCalendar(tomorrow);
-    const msg = `✅ ${slot}!`;
-    await sendSMS(From, msg);
-    await sendSMS(process.env.OWNER_PHONE, `New booking: ${lead.name} at ${slot}`);
-  } else await sendSMS(From, aiMsg);
-  res.send('<Response></Response>');
+// Incoming SMS webhook
+app.post("/sms", async (req, res) => {
+  try {
+    const from = req.body.From;
+    const body = req.body.Body;
+
+    const aiMessage = await getAIResponse(body);
+
+    await client.messages.create({
+      body: aiMessage,
+      from: process.env.TWILIO_PHONE,
+      to: from
+    });
+
+    res.send("<Response></Response>");
+  } catch (err) {
+    console.error("Error in /sms:", err.message);
+    res.status(200).send("<Response></Response>");
+  }
 });
 
-app.listen(process.env.PORT || 3000, () => console.log('🚀 PrimusInsights running'));
+app.listen(process.env.PORT || 10000, () => {
+  console.log("🚀 PrimusInsights running");
+});
