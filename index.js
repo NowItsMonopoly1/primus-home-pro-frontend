@@ -15,12 +15,8 @@ const leadStore = [];
 const sendSMS = async (to, body) => await twilioClient.messages.create({ from: process.env.TWILIO_PHONE, to, body });
 
 const getAIResponse = async (history) => {
-  const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'system', content: 'You are a roofing assistant. Acknowledge leads warmly. Ask ONE qualifying question: address, roof type, or availability. If customer gives availability, respond with ONLY: BOOK|day|time (e.g., BOOK|tomorrow|2pm). If unsure, say ESCALATE.' }, ...history],
-    max_tokens: 150
-  });
-  return res.choices[0].message.content;
+  // Mock AI response for MVP - replace with actual OpenAI call when key is valid
+  return "Thanks for reaching out! What's your address so we can check roof options?";
 };
 
 const bookCalendar = async (date) => {
