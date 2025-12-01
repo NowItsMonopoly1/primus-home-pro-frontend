@@ -42,7 +42,10 @@ export async function POST(req: Request) {
         // Retrieve subscription details
         const subscription = await stripe.subscriptions.retrieve(
           session.subscription as string
-        )
+        ) as Stripe.Subscription
+
+        // Get the first subscription item's current_period_end
+        const currentPeriodEnd = subscription.items.data[0]?.current_period_end
 
         // Update user with subscription info
         await prisma.user.update({
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
             stripeCustomer: session.customer as string,
             subscriptionPlan: session.metadata.planId,
             subscriptionStatus: subscription.status,
-            subscriptionCurrentEnd: new Date(subscription.current_period_end * 1000),
+            subscriptionCurrentEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
           },
         })
 
@@ -68,11 +71,14 @@ export async function POST(req: Request) {
           break
         }
 
+        // Get the first subscription item's current_period_end
+        const currentPeriodEnd = subscription.items.data[0]?.current_period_end
+
         await prisma.user.update({
           where: { id: userId },
           data: {
             subscriptionStatus: subscription.status,
-            subscriptionCurrentEnd: new Date(subscription.current_period_end * 1000),
+            subscriptionCurrentEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
           },
         })
 
