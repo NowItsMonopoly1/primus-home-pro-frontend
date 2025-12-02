@@ -65,3 +65,11 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 # TWILIO_AUTH_TOKEN=
 # TWILIO_PHONE_NUMBER=
 # RESEND_API_KEY=
+
+# ============================================================================
+# GOOGLE SOLAR API (Vertical Moat Feature)
+# ============================================================================
+# Get from: https://console.cloud.google.com/apis/credentials
+# Required APIs: Solar API, Geocoding API
+# See: https://developers.google.com/maps/documentation/solar
+GOOGLE_SOLAR_API_KEY=AIzaSy_YOUR_KEY_HERE

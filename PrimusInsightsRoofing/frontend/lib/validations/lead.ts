@@ -1,5 +1,5 @@
 // PRIMUS HOME PRO - Lead Validation Schemas
-// Zod schemas for form validation
+// Zod schemas for form validation (including solar-specific fields)
 
 import { z } from 'zod'
 
@@ -10,6 +10,10 @@ export const leadCaptureSchema = z.object({
     .string()
     .regex(/^[\d\s\-\(\)\+]+$/, 'Invalid phone number')
     .min(10, 'Phone number must be at least 10 digits')
+    .optional(),
+  address: z
+    .string()
+    .min(10, 'Please enter a complete address for solar analysis')
     .optional(),
   source: z.string(),
   message: z.string().optional(),

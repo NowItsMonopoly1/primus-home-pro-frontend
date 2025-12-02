@@ -25,11 +25,12 @@ model Automation {
 }
 
 model Lead {
-  id        String      @id
+  id        String      @id @default(cuid())
   userId    String
   name      String?
   email     String?
   phone     String?
+  address   String?     // Full address for geocoding
   source    String?
   score     Int         @default(0)
   stage     String      @default("New")
@@ -37,19 +38,83 @@ model Lead {
   sentiment String?
   notes     String?
   metadata  Json?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime
-  User      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  LeadEvent LeadEvent[]
+  
+  // Solar Site Suitability Fields (from Google Solar API)
+  roofPitch            Float?   // Slope of the roof in degrees
+  maxPanelsCount       Int?     // Maximum number of solar panels possible
+  maxSunshineHoursYear Float?   // Estimated annual sunlight hours
+  annualKwhProduction  Float?   // Estimated annual energy production in kWh
+  carbonOffsetKg       Float?   // Annual CO2 offset in kilograms
+  siteSuitability      String?  // 'VIABLE', 'CHALLENGING', 'NOT_VIABLE'
+  solarEnriched        Boolean  @default(false) // Flag indicating solar data fetched
+  solarEnrichedAt      DateTime? // When solar data was last fetched
+  
+  // Relations
+  siteSurvey  SiteSurvey?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  LeadEvent   LeadEvent[]
 
   @@index([createdAt])
   @@index([score])
   @@index([stage])
   @@index([userId])
+  @@index([siteSuitability])
+}
+
+// Detailed Solar Site Survey Data
+// Stores comprehensive API response and system design
+model SiteSurvey {
+  id                String   @id @default(cuid())
+  leadId            String   @unique
+  
+  // Location Data
+  latitude          Float?
+  longitude         Float?
+  imageryDate       DateTime? // Date of satellite imagery
+  imageryQuality    String?   // Quality of available imagery
+  
+  // Roof Analysis
+  roofSegmentCount  Int?      // Number of distinct roof segments
+  totalRoofAreaSqM  Float?    // Total roof area in square meters
+  usableRoofAreaSqM Float?    // Usable area for panels
+  azimuthDegrees    Float?    // Roof orientation (compass direction)
+  
+  // System Design
+  systemSizeKW      Float?    // Designed system size in kW
+  panelCapacityW    Int?      // Individual panel wattage
+  recommendedPanels Int?      // Recommended number of panels
+  
+  // Financial Projections
+  estimatedCostUsd     Float?   // Estimated installation cost
+  estimatedSavingsYear Float?   // Annual savings estimate
+  paybackYears         Float?   // Estimated payback period
+  
+  // Raw API Data
+  buildingInsightsJson Json?    // Full buildingInsights response
+  moduleLayoutJson     Json?    // Panel layout and segment data
+  financialAnalysisJson Json?   // Financial analysis data
+  
+  // Imagery
+  roofImageUrl      String?   // URL to roof satellite image
+  dsm3dUrl          String?   // Digital Surface Model 3D URL
+  
+  // Metadata
+  apiVersion        String?   // API version used
+  requestId         String?   // API request ID for debugging
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  Lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  @@index([leadId])
+  @@index([systemSizeKW])
 }
 
 model LeadEvent {
-  id        String   @id
+  id        String   @id @default(cuid())
   leadId    String
   type      String
   content   String?

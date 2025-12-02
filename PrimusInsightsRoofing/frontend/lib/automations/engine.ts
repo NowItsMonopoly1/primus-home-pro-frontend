@@ -1,13 +1,21 @@
 // PRIMUS HOME PRO - Automation Engine
 // Triggers automated workflows based on lead events
+// Includes Solar Site Suitability integration
 
 import { prisma } from '@/lib/db/prisma'
 import { sendLeadReply } from '@/lib/actions/ai'
+import { enrichLeadWithSolarData, isSolarApiConfigured, getSolarPotentialSummary } from '@/lib/solar/solar-api-service'
 import type { AIChannel } from '@/types'
 
 interface AutomationContext {
   leadId: string
   trigger: string
+  data?: {
+    address?: string
+    siteSuitability?: string
+    maxPanelsCount?: number
+    systemSizeKW?: number
+  }
 }
 
 interface AutomationConfig {
@@ -18,6 +26,12 @@ interface AutomationConfig {
     maxScore?: number
     intentIn?: string[]
     stageIn?: string[]
+    siteSuitabilityIn?: ('VIABLE' | 'CHALLENGING' | 'NOT_VIABLE')[]
+    solarEnriched?: boolean
+  }
+  actions?: {
+    enrichSolar?: boolean  // Trigger solar enrichment
+    notifyOnViable?: boolean  // Send notification for viable sites
   }
 }
 
@@ -80,17 +94,58 @@ export async function runAutomations(ctx: AutomationContext): Promise<void> {
     for (const automation of automations) {
       const config = (automation.config as AutomationConfig) || {}
 
-      // Check conditions
+      // Check conditions (including solar conditions)
       if (!checkConditions(lead, analysis, config.conditions)) {
         console.log(`[AUTO] Skipping "${automation.name}" - conditions not met`)
         continue
       }
 
-      // Render template
+      // Handle solar enrichment action if configured
+      if (config.actions?.enrichSolar && lead.address && !lead.solarEnriched && isSolarApiConfigured()) {
+        console.log(`[AUTO] Triggering solar enrichment for lead ${lead.id}`)
+        const solarResult = await enrichLeadWithSolarData(lead.id, lead.address)
+        
+        if (solarResult.success) {
+          console.log(`[AUTO] ✓ Solar enrichment complete: ${solarResult.siteSuitability}`)
+          
+          // Re-fetch lead to get updated data
+          const updatedLead = await prisma.lead.findUnique({ where: { id: lead.id } })
+          if (updatedLead) {
+            Object.assign(lead, updatedLead)
+          }
+
+          // Trigger solar.analyzed automation
+          await runAutomations({
+            leadId: lead.id,
+            trigger: 'solar.analyzed',
+            data: {
+              siteSuitability: solarResult.siteSuitability,
+              maxPanelsCount: solarResult.maxPanelsCount,
+              systemSizeKW: solarResult.systemSizeKW,
+            },
+          })
+        }
+      }
+
+      // Get solar potential summary for templates
+      const solarSummary = lead.solarEnriched && lead.siteSuitability && lead.maxPanelsCount
+        ? getSolarPotentialSummary(
+            lead.siteSuitability,
+            lead.maxPanelsCount,
+            (lead.maxPanelsCount * 400) / 1000 // Calculate kW from panels
+          )
+        : ''
+
+      // Render template with solar variables
       const message = renderTemplate(automation.template, {
         name: lead.name || 'there',
         businessType: lead.source || 'services',
         agentName: 'Primus Team',
+        solarSuitability: lead.siteSuitability || 'pending',
+        maxPanels: String(lead.maxPanelsCount || 0),
+        systemSize: lead.maxPanelsCount ? `${((lead.maxPanelsCount * 400) / 1000).toFixed(1)}kW` : 'N/A',
+        solarSummary,
+        annualProduction: lead.annualKwhProduction ? `${Math.round(lead.annualKwhProduction).toLocaleString()} kWh` : 'N/A',
       })
 
       // Determine channel
@@ -174,6 +229,18 @@ function checkConditions(
   // Stage matching
   if (conditions.stageIn && conditions.stageIn.length > 0) {
     if (!conditions.stageIn.includes(lead.stage)) return false
+  }
+
+  // Solar suitability matching
+  if (conditions.siteSuitabilityIn && conditions.siteSuitabilityIn.length > 0) {
+    if (!lead.siteSuitability || !conditions.siteSuitabilityIn.includes(lead.siteSuitability)) {
+      return false
+    }
+  }
+
+  // Solar enriched check
+  if (conditions.solarEnriched !== undefined) {
+    if (lead.solarEnriched !== conditions.solarEnriched) return false
   }
 
   return true
